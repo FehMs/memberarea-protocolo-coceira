@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { parsePurchases, validSignature } from '../../../../lib/webhook';
+import { parsePurchases, validPayloadSecret, validSignature } from '../../../../lib/webhook';
 
 export const runtime = 'nodejs';
 export async function POST(request: Request) {
@@ -11,9 +11,13 @@ export async function POST(request: Request) {
   if (Number(request.headers.get('content-length')) > 262144) return new Response(null, { status: 413 });
   const raw = await request.text();
   if (Buffer.byteLength(raw) > 262144) return new Response(null, { status: 413 });
-  if (!validSignature(raw, request.headers.get('x-cakto-timestamp'), request.headers.get('x-cakto-signature'), secret)) return new Response(null, { status: 401 });
+  let payload;
+  try { payload = JSON.parse(raw); }
+  catch { return Response.json({ error: 'Invalid payload' }, { status: 400 }); }
+  const signed = validSignature(raw, request.headers.get('x-cakto-timestamp'), request.headers.get('x-cakto-signature'), secret);
+  if (!signed && !validPayloadSecret(payload, secret)) return new Response(null, { status: 401 });
   let purchases;
-  try { purchases = parsePurchases(JSON.parse(raw), allowed); }
+  try { purchases = parsePurchases(payload, allowed); }
   catch { return Response.json({ error: 'Invalid payload' }, { status: 400 }); }
   if (!purchases.length) return Response.json({ received: true, ignored: true });
   const db = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });

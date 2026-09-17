@@ -9,6 +9,15 @@ export function validSignature(raw: string, timestamp: string | null, signature:
   });
 }
 
+export function validPayloadSecret(payload: unknown, secret: string) {
+  if (!payload || typeof payload !== 'object') return false;
+  const incoming = (payload as { secret?: unknown }).secret;
+  if (typeof incoming !== 'string') return false;
+  const expected = Buffer.from(secret);
+  const actual = Buffer.from(incoming);
+  return actual.length === expected.length && timingSafeEqual(actual, expected);
+}
+
 export type Purchase = { order_id: string; product_id: string; email: string; status: 'paid' | 'refunded' | 'chargedback' };
 export function parsePurchases(payload: unknown, allowed: string[]): Purchase[] {
   if (!payload || typeof payload !== 'object') throw new Error('Invalid payload');

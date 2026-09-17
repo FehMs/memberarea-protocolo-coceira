@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
-import { parsePurchases, validSignature } from '../lib/webhook.ts';
+import { parsePurchases, validPayloadSecret, validSignature } from '../lib/webhook.ts';
 
 const now = Date.now();
 const timestamp = String(Math.floor(now / 1000));
@@ -17,6 +17,13 @@ test('accepts signed payload; rejects tampering, wrong key, missing and expired 
   assert.equal(validSignature(raw, timestamp, signature, secret, now + 301000), false);
   assert.equal(validSignature(raw, 'NaN', signature, secret, now), false);
 });
+
+test('accepts Cakto payload secret safely', () => {
+  assert.equal(validPayloadSecret({ secret }, secret), true);
+  assert.equal(validPayloadSecret({ secret: 'wrong-secret' }, secret), false);
+  assert.equal(validPayloadSecret({}, secret), false);
+});
+
 test('parses V1, V2 and revocation events, normalizing email', () => {
   assert.equal(parsePurchases(JSON.parse(raw), ['product-1'])[0].email, 'buyer@example.com');
   assert.equal(parsePurchases({ event: 'refund', data: [order] }, ['product-1'])[0].status, 'refunded');
