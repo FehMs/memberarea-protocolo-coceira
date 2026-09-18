@@ -5,7 +5,7 @@ import type { Session } from '@supabase/supabase-js';
 import { ArrowLeft, ArrowRight, BookOpen, Check, ChevronLeft, ChevronRight, Download, Eye, EyeOff, Heart, Library, LoaderCircle, LockKeyhole, LogOut, Mail, PawPrint, Search, ShieldCheck, Sparkles, X } from 'lucide-react';
 import { browserDb, configured } from '../lib/supabase';
 
-type Material = { id: string; section: string; label: string; title: string; description: string; body: string; image_path: string | null; file_path: string | null; imageUrl?: string };
+type Material = { id: string; section: string; label: string; title: string; description: string; body: string; image_path: string | null; modal_image_path?: string | null; file_path: string | null; imageUrl?: string; modalImageUrl?: string };
 const sections = [
   { id: 'protocol', title: 'Protocolo 7 Dias', subtitle: 'Todos os conteudos, sempre a mao.' },
   { id: 'bonus', title: 'Um cuidado a mais', subtitle: 'Seus guias e materiais complementares.' },
@@ -105,12 +105,12 @@ function MaterialModal({ material, close }: { material: Material; close: () => v
     else { const link = document.createElement('a'); link.href = data.signedUrl; link.rel = 'noopener'; link.target = '_blank'; link.click(); }
     setBusy(false);
   }
-  return <dialog ref={dialog} className="material-modal" onCancel={close} onClick={e => { if (e.target === e.currentTarget) close(); }} aria-labelledby="material-title"><div className="modal-inner"><button className="close" aria-label="Fechar conteudo" onClick={close}><X/></button><div className={`modal-art tone-${material.section}`}>{material.imageUrl ? <img src={material.imageUrl} alt={material.title}/> : <BookOpen size={88} strokeWidth={1}/>}<span>{material.label}</span></div><div className="modal-copy"><span className="eyebrow">{material.label}</span><h2 id="material-title">{material.title}</h2><p className="material-description">{material.description}</p><div className="material-body">{material.body}</div>{error && <p role="alert">{error}</p>}<div className="modal-actions">{material.file_path && <button className="primary" disabled={busy} onClick={download}><Download size={17}/>{busy ? 'Abrindo...' : 'Baixar material'}</button>}<button className="secondary" onClick={close}>Fechar</button></div></div></div></dialog>;
+  return <dialog ref={dialog} className="material-modal" onCancel={close} onClick={e => { if (e.target === e.currentTarget) close(); }} aria-labelledby="material-title"><div className="modal-inner"><button className="close" aria-label="Fechar conteudo" onClick={close}><X/></button><div className={`modal-art tone-${material.section}`}>{material.modalImageUrl || material.imageUrl ? <img src={material.modalImageUrl || material.imageUrl} alt={material.title}/> : <BookOpen size={88} strokeWidth={1}/>}</div><div className="modal-copy"><span className="eyebrow">{material.label}</span><h2 id="material-title">{material.title}</h2><p className="material-description">{material.description}</p><div className="material-body">{material.body}</div>{error && <p role="alert">{error}</p>}<div className="modal-actions">{material.file_path && <button className="primary" disabled={busy} onClick={download}><Download size={17}/>{busy ? 'Abrindo...' : 'Baixar material'}</button>}<button className="secondary" onClick={close}>Fechar</button></div></div></div></dialog>;
 }
 
 function Shelf({ title, subtitle, items, open }: { title: string; subtitle: string; items: Material[]; open: (m: Material) => void }) {
   const rail = useRef<HTMLDivElement>(null);
-  return <section className="shelf"><div className="section-heading"><div><h2>{title}</h2><p>{subtitle}</p></div><div className="rail-controls"><button aria-label={`Voltar em ${title}`} onClick={() => rail.current?.scrollBy({ left: -330, behavior: 'smooth' })}><ChevronLeft size={18}/></button><button aria-label={`Avancar em ${title}`} onClick={() => rail.current?.scrollBy({ left: 330, behavior: 'smooth' })}><ChevronRight size={18}/></button></div></div><div className="card-rail" ref={rail}>{items.map(m => <button className="material-card" key={m.id} onClick={() => open(m)}><div className={`card-art tone-${m.section}`}>{m.imageUrl ? <img src={m.imageUrl} alt="" loading="lazy"/> : <BookOpen size={55} strokeWidth={1}/>}<span className="card-label">{m.label}</span><span className="art-mark"><PawPrint size={17}/></span></div><div className="card-copy"><h3>{m.title}</h3><p>{m.description}</p><span className="card-link">Abrir conteudo <ArrowRight size={18}/></span></div></button>)}</div></section>;
+  return <section className="shelf"><div className="section-heading"><div><h2>{title}</h2><p>{subtitle}</p></div><div className="rail-controls"><button aria-label={`Voltar em ${title}`} onClick={() => rail.current?.scrollBy({ left: -330, behavior: 'smooth' })}><ChevronLeft size={18}/></button><button aria-label={`Avancar em ${title}`} onClick={() => rail.current?.scrollBy({ left: 330, behavior: 'smooth' })}><ChevronRight size={18}/></button></div></div><div className="card-rail" ref={rail}>{items.map(m => <button className="material-card" key={m.id} onClick={() => open(m)}><div className={`card-art tone-${m.section}`}>{m.imageUrl ? <img src={m.imageUrl} alt="" loading="lazy"/> : <BookOpen size={55} strokeWidth={1}/>}<span className="art-mark"><PawPrint size={17}/></span></div><div className="card-copy"><h3>{m.title}</h3><p>{m.description}</p><span className="card-link">Abrir conteudo <ArrowRight size={18}/></span></div></button>)}</div></section>;
 }
 
 export default function Members() {
@@ -132,7 +132,13 @@ export default function Members() {
       const [purchases, contents] = await Promise.all([client.from('purchases').select('order_id').eq('status','paid').limit(1), client.from('materials').select('*').order('position')]);
       if (purchases.error || contents.error) throw new Error('Nao foi possivel carregar sua biblioteca. Tente novamente.');
       setAccess(Boolean(purchases.data.length));
-      const rows = await Promise.all((contents.data as Material[]).map(async m => { if (!m.image_path) return m; const { data } = await client.storage.from('materials').createSignedUrl(m.image_path, 300); return { ...m, imageUrl: data?.signedUrl }; }));
+      const rows = await Promise.all((contents.data as Material[]).map(async m => {
+        const [card, modal] = await Promise.all([
+          m.image_path ? client.storage.from('materials').createSignedUrl(m.image_path, 300) : Promise.resolve({ data: null }),
+          m.modal_image_path ? client.storage.from('materials').createSignedUrl(m.modal_image_path, 300) : Promise.resolve({ data: null })
+        ]);
+        return { ...m, imageUrl: card.data?.signedUrl, modalImageUrl: modal.data?.signedUrl };
+      }));
       setMaterials(rows);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Erro ao carregar.');

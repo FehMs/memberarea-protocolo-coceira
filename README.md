@@ -43,7 +43,9 @@ No Table Editor, adicione linhas em `materials`:
 - `title`, `description`, `body`: conteudo final; o texto preserva paragrafos, sem HTML executavel.
 - `position`: ordem dos cards.
 - `published`: true quando estiver pronto.
-- `image_path` e `file_path`: caminhos dos arquivos enviados ao bucket privado `materials`, sem URL publica e sem o nome do bucket.
+- `image_path`: imagem do card, enviada ao bucket privado `materials`.
+- `modal_image_path`: opcional, imagem usada apenas no modal. Se ficar vazio, o modal usa `image_path` sem cortar a arte.
+- `file_path`: opcional, PDF ou arquivo baixavel.
 
 Cadastre Dia 1 a Dia 7, os bonus e o checklist com os textos e arquivos aprovados. O banco comeca vazio para nao apresentar demonstracoes como conteudo comprado.
 
