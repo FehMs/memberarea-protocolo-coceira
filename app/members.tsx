@@ -73,8 +73,8 @@ function Login({ onSession }: { onSession: (session: Session) => void }) {
         <form onSubmit={submit}>
           <label>E-mail da compra<div className="input-wrap"><Mail size={18}/><input required type="email" autoComplete="email" placeholder="Seu e-mail" value={email} onChange={e => setEmail(e.target.value)}/></div></label>
           <label>{mode === 'login' ? 'Senha' : 'Crie uma senha'}<div className="input-wrap"><LockKeyhole size={18}/><input required minLength={mode === 'first' ? 8 : 1} type={visible ? 'text' : 'password'} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} value={password} placeholder="Sua senha" onChange={e => setPassword(e.target.value)}/><button type="button" aria-label={visible ? 'Ocultar senha' : 'Mostrar senha'} onClick={() => setVisible(!visible)}>{visible ? <EyeOff size={18}/> : <Eye size={18}/>}</button></div></label>
-          {mode === 'first' && <label>Confirme sua senha<input required minLength={8} type="password" autoComplete="new-password" value={confirm} onChange={e => setConfirm(e.target.value)}/></label>}
-          {message && <p className="form-message" role="status">{message}</p>}
+          {mode === 'first' && <label>Confirme sua senha<div className="input-wrap"><LockKeyhole size={18}/><input required minLength={8} type={visible ? 'text' : 'password'} autoComplete="new-password" value={confirm} placeholder="Repita sua senha" onChange={e => setConfirm(e.target.value)}/></div></label>}
+          {message && <p className="form-message" role="status">{message}{message.includes('compra aprovada') && <> <a href="https://pay.cakto.com.br/exdbjgo_1117253" target="_blank" rel="noopener noreferrer">Comprar agora</a></>}</p>}
           <button className="primary" disabled={busy}>{busy ? <LoaderCircle className="spin" size={18}/> : <>{mode === 'login' ? 'Entrar na minha biblioteca' : 'Criar senha e entrar'}<ArrowRight size={18}/></>}</button>
         </form>
         {mode === 'login'
